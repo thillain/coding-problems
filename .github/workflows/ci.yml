@@ -1,0 +1,59 @@
+name: CI for Javascript & Python
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  javascript:
+    name: JavaScript CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install JS dependencies
+        run: |
+          cd javascript
+          npm install
+
+      - name: Run JS tests
+        run: |
+          cd javascript
+          npm test
+
+  python:
+    name: Python CI
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Python version
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip' # Caches dependencies for faster runs
+        
+      # Install dependencies
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+ 
+      - name: Run Python tests
+        run: |
+          pip install pytest
+          pytest -q

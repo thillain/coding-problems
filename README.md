@@ -16,5 +16,11 @@ This repository contains solutions to various coding problems organized by langu
 
 For JavaScript:
 ```sh
-npm install
-npm test
+yarn install
+yarn test
+```
+
+For Python
+```sh
+pip install pytest
+pytest
