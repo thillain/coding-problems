@@ -24,3 +24,7 @@ For Python
 ```sh
 pip install pytest
 pytest
+```
+
+## Build Status
+[![CI for Javascript & Python](https://github.com/thillain/coding-problems/actions/workflows/ci.yml/badge.svg)](https://github.com/thillain/coding-problems/actions/workflows/ci.yml)
