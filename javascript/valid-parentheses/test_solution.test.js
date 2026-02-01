@@ -19,3 +19,7 @@ test('test four', () => {
 test('test five', () => {
     expect(isValid('([)]')).toEqual(false);
 })
+
+test.only('negative scenario', () => {
+    expect(isValid('(')).toEqual(false);
+})

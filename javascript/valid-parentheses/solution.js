@@ -27,4 +27,6 @@ var isValid = function (s) {
         }
         return stack.length === 0;
     }
+    return false;
 };
+module.exports = {isValid}
