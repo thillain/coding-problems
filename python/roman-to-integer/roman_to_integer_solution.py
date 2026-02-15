@@ -1,4 +1,4 @@
-class Solution:
+Class Solution:
     def romanToInt(self, s: str) -> int:
         romanDict = {
             'I': 1,
@@ -21,4 +21,5 @@ class Solution:
                 total += currentValue
         
         return total
-
+        
+                                                       
