@@ -6,6 +6,9 @@ on:
     branches: ["main", "develop" ,"fix/jan"]
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  
 jobs:
   javascript:
     name: JavaScript CI

@@ -1,25 +1,114 @@
-name: Complete Jira Story on Merge
+name: Complete Jira Story on PR Merge
+
 on:
   pull_request:
-    types: [closed]
-  branches:
+    types:
+      - closed
+    branches:
       - main
       - master
 
-jobs:
-  close-jira-issue:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Find Issue Key
-        id: find
-        uses: atlassian/gajira-find-issue-key@v3
-        with:
-          string: "${{ github.event.pull_request.head.ref }}" # Searches branch name
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-      - name: Transition to Done
-        if: steps.find.outputs.issue != ''
-        uses: atlassian/gajira-transition@v3
-        with:
-          issue: ${{ steps.find.outputs.issue }}
-          transition: "Done"
+jobs:
+  complete-jira-story:
+    runs-on: ubuntu-latest
+    # Only run if the PR was actually merged (not just closed)
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Get branch name
+        id: branch
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          echo "name=$BRANCH" >> $GITHUB_OUTPUT
+          echo "Branch: $BRANCH"
+
+      - name: Find Jira Issue by branch label
+        id: find_issue
+        run: |
+          BRANCH="${{ steps.branch.outputs.name }}"
+
+          # Search Jira for issues labeled with this branch name
+          RESPONSE=$(curl -s \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/search?jql=project=${{ secrets.JIRA_PROJECT_KEY }}+AND+labels=%22$BRANCH%22&fields=key,summary,status")
+
+          echo "Search response: $RESPONSE"
+
+          ISSUE_KEY=$(echo $RESPONSE | jq -r '.issues[0].key')
+          echo "issue_key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+
+          if [ "$ISSUE_KEY" == "null" ] || [ -z "$ISSUE_KEY" ]; then
+            echo "⚠️ No Jira issue found for branch: $BRANCH"
+            exit 0
+          fi
+
+          echo "✅ Found Jira issue: $ISSUE_KEY"
+
+      - name: Move Jira Story to Done
+        if: steps.find_issue.outputs.issue_key != '' && steps.find_issue.outputs.issue_key != 'null'
+        run: |
+          ISSUE_KEY="${{ steps.find_issue.outputs.issue_key }}"
+
+          # Get available transitions for this issue
+          TRANSITIONS=$(curl -s \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/$ISSUE_KEY/transitions")
+
+          echo "Available transitions: $TRANSITIONS"
+
+          # Find "Done" transition ID (adjust if your board uses "Closed", "Complete", etc.)
+          TRANSITION_ID=$(echo $TRANSITIONS | jq -r '.transitions[] | select(.name == "Done") | .id')
+
+          if [ -z "$TRANSITION_ID" ]; then
+            echo "Trying alternate names..."
+            TRANSITION_ID=$(echo $TRANSITIONS | jq -r '.transitions[] | select(.name | test("done|complete|close|finish|resolve"; "i")) | .id' | head -1)
+          fi
+
+          if [ -z "$TRANSITION_ID" ]; then
+            echo "❌ Could not find a Done/Complete transition. Please check your Jira workflow transitions."
+            echo "Available: $(echo $TRANSITIONS | jq -r '.transitions[].name')"
+            exit 1
+          fi
+
+          curl -s \
+            -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"transition\": {\"id\": \"$TRANSITION_ID\"}}" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/$ISSUE_KEY/transitions"
+
+          echo "✅ Moved $ISSUE_KEY to Done"
+
+      - name: Add merge comment to Jira issue
+        if: steps.find_issue.outputs.issue_key != '' && steps.find_issue.outputs.issue_key != 'null'
+        run: |
+          ISSUE_KEY="${{ steps.find_issue.outputs.issue_key }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          MERGED_BY="${{ github.event.pull_request.merged_by.login }}"
+
+          curl -s \
+            -X POST \
+            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"body\": {
+                \"type\": \"doc\",
+                \"version\": 1,
+                \"content\": [{
+                  \"type\": \"paragraph\",
+                  \"content\": [{
+                    \"type\": \"text\",
+                    \"text\": \"✅ PR merged by $MERGED_BY: $PR_TITLE\\n$PR_URL\"
+                  }]
+                }]
+              }
+            }" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/$ISSUE_KEY/comment"
+
+          echo "✅ Added merge comment to $ISSUE_KEY"
