@@ -1,0 +1,26 @@
+name: Create Jira Story on Push
+on:
+  push:
+    branches-ignore:
+      - 'main' # Optional: limit to specific branch patterns
+      - 'master'
+
+jobs:
+  create-jira-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue and Transition
+        uses: atlassian/gajira-create@v3
+        id: create
+        with:
+          project: LEETCS # Your Jira Project Key
+          issuetype: Story
+          summary: "${{ github.event.head_commit.message }}"
+          description: "LeetCode Solution pushed from VS Code. Commit: ${{ github.sha }}"
+          fields: '{"assignee": {"name": "your-username"}}'
+
+      - name: Move to In Progress
+        uses: atlassian/gajira-transition@v3
+        with:
+          issue: ${{ steps.create.outputs.issue }}
+          transition: "In Progress"

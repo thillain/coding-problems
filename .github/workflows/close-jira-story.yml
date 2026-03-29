@@ -1,0 +1,25 @@
+name: Complete Jira Story on Merge
+on:
+  pull_request:
+    types: [closed]
+  branches:
+      - main
+      - master
+
+jobs:
+  close-jira-issue:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find Issue Key
+        id: find
+        uses: atlassian/gajira-find-issue-key@v3
+        with:
+          string: "${{ github.event.pull_request.head.ref }}" # Searches branch name
+
+      - name: Transition to Done
+        if: steps.find.outputs.issue != ''
+        uses: atlassian/gajira-transition@v3
+        with:
+          issue: ${{ steps.find.outputs.issue }}
+          transition: "Done"
