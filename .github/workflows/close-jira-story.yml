@@ -1,0 +1,36 @@
+name: Jira - Complete Story
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - master
+
+jobs:
+  close-issue:
+    # Only execute if the PR was merged, not just closed/cancelled
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Jira Login
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      - name: Find Issue Key
+        id: find
+        uses: atlassian/gajira-find-issue-key@v3
+        with:
+          string: "${{ github.event.pull_request.head.ref }}"
+
+      - name: Transition to Done
+        if: steps.find.outputs.issue != ''
+        uses: atlassian/gajira-transition@v3
+        with:
+          issue: ${{ steps.find.outputs.issue }}
+          transition: "Done"
