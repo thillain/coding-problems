@@ -6,6 +6,9 @@ on:
       - main
       - master
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   close-issue:
     # Only execute if the PR was merged, not just closed/cancelled
