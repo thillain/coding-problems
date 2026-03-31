@@ -47,7 +47,7 @@ jobs:
                 "project": { "key": "LEETCS" },
                 "summary": $summary,
                 "description": $body,
-                "issuetype": { "name": "Story" }
+                "issuetype": { "name": "Task" }
               }
             }')
           
