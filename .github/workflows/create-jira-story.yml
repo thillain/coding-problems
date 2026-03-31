@@ -5,10 +5,21 @@ on:
       - main
       - master
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   create-jira-issue:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Parse Commit Message
         id: msg
         run: |
@@ -16,28 +27,45 @@ jobs:
           FULL_MSG="${{ github.event.head_commit.message }}"
           SUMMARY=$(echo "$FULL_MSG" | head -n 1)
           BODY=$(echo "$FULL_MSG" | sed '1d')
-          echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
-          echo "body=${BODY:-'No description provided.'}" >> $GITHUB_OUTPUT
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "${BODY:-No description provided.}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create Jira Issue
         id: create
+        env:
+          JIRA_SUMMARY: ${{ steps.msg.outputs.summary }}
+          JIRA_BODY: ${{ steps.msg.outputs.body }}
+          SHA: ${{ github.sha }}
         run: |
+          PAYLOAD=$(jq -n \
+            --arg summary "$JIRA_SUMMARY" \
+            --arg body "Commit: $SHA\n\n$JIRA_BODY" \
+            '{
+              "fields": {
+                "project": { "key": "PROJ" },
+                "summary": $summary,
+                "description": $body,
+                "issuetype": { "name": "Story" }
+              }
+            }')
+          
           RESPONSE=$(curl --request POST \
             --url "${{ secrets.JIRA_BASE_URL }}/rest/api/2/issue" \
             --user "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
             --header 'Accept: application/json' \
             --header 'Content-Type: application/json' \
-            --data '{
-              "fields": {
-                "project": { "key": "PROJ" },
-                "summary": "${{ steps.msg.outputs.summary }}",
-                "description": "Commit: ${{ github.sha }}\n\n${{ steps.msg.outputs.body }}",
-                "issuetype": { "name": "Story" }
-              }
-            }')
+            --data "$PAYLOAD")
           
           # Extract the Issue Key (e.g., PROJ-123)
-          ISSUE_KEY=$(echo $RESPONSE | jq -r '.key')
+          ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
+          if [ "$ISSUE_KEY" == "null" ]; then
+            echo "Failed to create issue. Response: $RESPONSE"
+            exit 1
+          fi
           echo "key=$ISSUE_KEY" >> $GITHUB_OUTPUT
           echo "Created Issue: $ISSUE_KEY"
 

@@ -4,18 +4,31 @@ on:
     types: [closed]
     branches: [main, master]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   close-jira:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Extract Issue Key
         id: extract
         run: |
           # Regex to find PROJ-123 style keys in the branch name
           BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-          ISSUE_KEY=$(echo "$BRANCH_NAME" | grep -oE "[A-Z]+-[0-9]+")
-          echo "key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+          ISSUE_KEY=$(echo "$BRANCH_NAME" | grep -oE "[A-Z]+-[0-9]+" | head -n 1)
+          if [ -n "$ISSUE_KEY" ]; then
+            echo "key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+          fi
 
       - name: Transition to Done
         if: steps.extract.outputs.key != ''
