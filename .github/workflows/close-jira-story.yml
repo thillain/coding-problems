@@ -35,4 +35,4 @@ jobs:
             --url "${{ secrets.JIRA_BASE_URL }}/rest/api/2/issue/${{ steps.extract.outputs.key }}/transitions" \
             --user "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
             --header 'Content-Type: application/json' \
-            --data '{"transition": {"id": "31"}}' # Replace 31 with your 'Done' ID
+            --data '{"transition": {"id": "Done"}}' # Replace 31 with your 'Done' ID
