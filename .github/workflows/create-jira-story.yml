@@ -44,7 +44,7 @@ jobs:
             --arg body "Commit: $SHA\n\n$JIRA_BODY" \
             '{
               "fields": {
-                "project": { "key": "PROJ" },
+                "project": { "key": "LEETCS" },
                 "summary": $summary,
                 "description": $body,
                 "issuetype": { "name": "Story" }
