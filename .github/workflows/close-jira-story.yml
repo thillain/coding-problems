@@ -1,0 +1,38 @@
+name: Jira - Complete Story
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, master]
+
+
+jobs:
+  close-jira:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Extract Issue Key
+        id: extract
+        run: |
+          # Regex to find PROJ-123 style keys in the branch name
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          ISSUE_KEY=$(echo "$BRANCH_NAME" | grep -oE "[A-Z]+-[0-9]+" | head -n 1)
+          if [ -n "$ISSUE_KEY" ]; then
+            echo "key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Transition to Done
+        if: steps.extract.outputs.key != ''
+        run: |
+          curl --request POST \
+            --url "${{ secrets.JIRA_BASE_URL }}/rest/api/2/issue/${{ steps.extract.outputs.key }}/transitions" \
+            --user "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            --header 'Content-Type: application/json' \
+            --data '{"transition": {"id": "31"}}' # Replace 31 with your 'Done' ID

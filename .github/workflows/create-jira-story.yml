@@ -1,0 +1,76 @@
+name: Jira - Create Story on Push
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+
+
+jobs:
+  create-jira-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Parse Commit Message
+        id: msg
+        run: |
+          # Extract first line for Title, rest for Description
+          FULL_MSG="${{ github.event.head_commit.message }}"
+          SUMMARY=$(echo "$FULL_MSG" | head -n 1)
+          BODY=$(echo "$FULL_MSG" | sed '1d')
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "${BODY:-No description provided.}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Jira Issue
+        id: create
+        env:
+          JIRA_SUMMARY: ${{ steps.msg.outputs.summary }}
+          JIRA_BODY: ${{ steps.msg.outputs.body }}
+          SHA: ${{ github.sha }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg summary "$JIRA_SUMMARY" \
+            --arg body "Commit: $SHA\n\n$JIRA_BODY" \
+            '{
+              "fields": {
+                "project": { "key": "LEETCS" },
+                "summary": $summary,
+                "description": $body,
+                "issuetype": { "name": "Task" }
+              }
+            }')
+          
+          RESPONSE=$(curl --request POST \
+            --url "${{ secrets.JIRA_BASE_URL }}/rest/api/2/issue" \
+            --user "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            --header 'Accept: application/json' \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD")
+          
+          # Extract the Issue Key (e.g., PROJ-123)
+          ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
+          if [ "$ISSUE_KEY" == "null" ]; then
+            echo "Failed to create issue. Response: $RESPONSE"
+            exit 1
+          fi
+          echo "key=$ISSUE_KEY" >> $GITHUB_OUTPUT
+          echo "Created Issue: $ISSUE_KEY"
+
+      - name: Move to In Progress
+        run: |
+          curl --request POST \
+            --url "${{ secrets.JIRA_BASE_URL }}/rest/api/2/issue/${{ steps.create.outputs.key }}/transitions" \
+            --user "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            --header 'Content-Type: application/json' \
+            --data '{"transition": {"id": "11"}}' # Replace 11 with your 'In Progress' ID
