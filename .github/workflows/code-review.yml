@@ -7,9 +7,10 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          node-version: "24"
       
       - name: Get PR Diff
         id: diff
@@ -34,7 +35,7 @@ jobs:
                 'content-type': 'application/json'
               },
               body: JSON.stringify({
-                model: 'claude-opus-4-6',
+                model: 'claude-opus-4',
                 max_tokens: 1024,
                 messages: [{ role: 'user', content: `Review this PR diff:\n${diff}` }]
               })
