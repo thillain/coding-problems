@@ -1,20 +1,34 @@
 # Coding Problems
 
-This repository contains solutions to various coding problems organized by language and category.
+This repository contains leetcode solutions and others in Python and Javascript for coding problems organized by pattern/topic.
 
 ## Structure
+Each topic folder (arrays, trees, graphs, etc.) contains:
+- `problem-name.py` — Python solution
+- `problem-name.js` — JavaScript solution  
+- `problem-name.md` — approach, complexity, notes
 
-- **javascript/**: Contains JavaScript solutions.
-- **python/**: Contains Python solutions.
+## Topics
+- arrays
+- strings
+- sliding-window
+- two-pointers
+- linked-list
+- trees
+- graphs
+- dynamic-programming
+- backtracking
 
-## How to Use
+## Patterns
+See the `patterns/` folder for notes on common problem-solving techniques.
 
-1. Navigate to the relevant language and problem directory.
-2. Follow the instructions in the problem's `README.md` (if available).
-
-## Testing
-
-For JavaScript:
-```sh
-npm install
-npm test
+## Progress
+| Topic | Solved |
+|-------|--------|
+| Arrays | 0 |
+| Strings | 0 |
+| Trees | 0 |
+| Graphs | 0 |
+| DP | 0 |
+| Two Pointers | 1 |
+| **Total** | **1** |
