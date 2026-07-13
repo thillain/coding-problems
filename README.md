@@ -25,10 +25,14 @@ See the `patterns/` folder for notes on common problem-solving techniques.
 ## Progress
 | Topic | Solved |
 |-------|--------|
-| Arrays | 0 |
-| Strings | 0 |
+| Arrays | 4 |
+| Strings | 2 |
 | Trees | 0 |
 | Graphs | 0 |
 | DP | 0 |
-| Two Pointers | 1 |
-| **Total** | **1** |
+| Two Pointers | 2 |
+| Binary Search | 1 |
+| **Total** | **9** |
+
+## Resources
+- [LeetCode](https://leetcode.com)
